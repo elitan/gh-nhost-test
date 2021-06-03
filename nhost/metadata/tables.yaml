@@ -1,0 +1,491 @@
+- table:
+    schema: auth
+    name: account_providers
+  object_relationships:
+  - name: account
+    using:
+      foreign_key_constraint_on: account_id
+  - name: provider
+    using:
+      foreign_key_constraint_on: auth_provider
+- table:
+    schema: auth
+    name: account_roles
+  object_relationships:
+  - name: account
+    using:
+      foreign_key_constraint_on: account_id
+  - name: roleByRole
+    using:
+      foreign_key_constraint_on: role
+- table:
+    schema: auth
+    name: accounts
+  object_relationships:
+  - name: role
+    using:
+      foreign_key_constraint_on: default_role
+  - name: user
+    using:
+      foreign_key_constraint_on: user_id
+  array_relationships:
+  - name: account_providers
+    using:
+      foreign_key_constraint_on:
+        column: account_id
+        table:
+          schema: auth
+          name: account_providers
+  - name: account_roles
+    using:
+      foreign_key_constraint_on:
+        column: account_id
+        table:
+          schema: auth
+          name: account_roles
+  - name: refresh_tokens
+    using:
+      foreign_key_constraint_on:
+        column: account_id
+        table:
+          schema: auth
+          name: refresh_tokens
+- table:
+    schema: auth
+    name: providers
+  array_relationships:
+  - name: account_providers
+    using:
+      foreign_key_constraint_on:
+        column: auth_provider
+        table:
+          schema: auth
+          name: account_providers
+- table:
+    schema: auth
+    name: refresh_tokens
+  object_relationships:
+  - name: account
+    using:
+      foreign_key_constraint_on: account_id
+- table:
+    schema: auth
+    name: roles
+  array_relationships:
+  - name: account_roles
+    using:
+      foreign_key_constraint_on:
+        column: role
+        table:
+          schema: auth
+          name: account_roles
+  - name: accounts
+    using:
+      foreign_key_constraint_on:
+        column: default_role
+        table:
+          schema: auth
+          name: accounts
+- table:
+    schema: public
+    name: applicant_comments
+  object_relationships:
+  - name: applicant
+    using:
+      foreign_key_constraint_on: applicant_id
+  - name: user
+    using:
+      foreign_key_constraint_on: user_id
+  insert_permissions:
+  - role: user
+    permission:
+      check:
+        applicant:
+          job:
+            company_id:
+              _eq: x-hasura-company-id
+      set:
+        user_id: x-hasura-user-id
+      columns:
+      - applicant_id
+      - comment
+      backend_only: false
+  select_permissions:
+  - role: user
+    permission:
+      columns:
+      - comment
+      - created_at
+      - applicant_id
+      - id
+      - user_id
+      filter:
+        applicant:
+          job:
+            company_id:
+              _eq: x-hasura-company-id
+      allow_aggregations: true
+  update_permissions:
+  - role: user
+    permission:
+      columns:
+      - comment
+      filter:
+        user_id:
+          _eq: x-hasura-user-id
+      check: null
+  delete_permissions:
+  - role: user
+    permission:
+      filter:
+        user_id:
+          _eq: x-hasura-user-id
+- table:
+    schema: public
+    name: applicant_statuses
+  array_relationships:
+  - name: applicants
+    using:
+      foreign_key_constraint_on:
+        column: status
+        table:
+          schema: public
+          name: applicants
+- table:
+    schema: public
+    name: applicants
+  object_relationships:
+  - name: applicant_status
+    using:
+      foreign_key_constraint_on: status
+  - name: job
+    using:
+      foreign_key_constraint_on: job_id
+  array_relationships:
+  - name: applicant_comments
+    using:
+      foreign_key_constraint_on:
+        column: applicant_id
+        table:
+          schema: public
+          name: applicant_comments
+  - name: applicants_data
+    using:
+      foreign_key_constraint_on:
+        column: application_id
+        table:
+          schema: public
+          name: applicants_data
+  insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+      - cv
+      - email
+      - first_name
+      - job_id
+      - last_name
+      - mobile
+      - personal_letter
+      backend_only: false
+  select_permissions:
+  - role: user
+    permission:
+      columns:
+      - created_at
+      - cv
+      - email
+      - first_name
+      - id
+      - is_archived
+      - job_id
+      - last_name
+      - mobile
+      - personal_letter
+      - status
+      - updated_at
+      filter:
+        job:
+          company_id:
+            _eq: x-hasura-company-id
+      allow_aggregations: true
+  update_permissions:
+  - role: user
+    permission:
+      columns:
+      - is_archived
+      - status
+      filter:
+        job:
+          company_id:
+            _eq: x-hasura-company-id
+      check: null
+  event_triggers:
+  - name: new_applicants
+    definition:
+      enable_manual: false
+      insert:
+        columns: '*'
+    retry_conf:
+      num_retries: 0
+      interval_sec: 10
+      timeout_sec: 60
+    webhook: https://admin.teamfind.se/api/discord-new-applicant
+- table:
+    schema: public
+    name: applicants_data
+  object_relationships:
+  - name: applicant
+    using:
+      foreign_key_constraint_on: application_id
+  insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+      - data
+      - label
+      - sort
+      - type
+      backend_only: false
+  select_permissions:
+  - role: user
+    permission:
+      columns:
+      - application_id
+      - data
+      - id
+      - label
+      - sort
+      - type
+      filter:
+        applicant:
+          job:
+            company_id:
+              _eq: x-hasura-company-id
+- table:
+    schema: public
+    name: companies
+  array_relationships:
+  - name: jobs
+    using:
+      foreign_key_constraint_on:
+        column: company_id
+        table:
+          schema: public
+          name: jobs
+  - name: users
+    using:
+      foreign_key_constraint_on:
+        column: company_id
+        table:
+          schema: public
+          name: users
+  insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+      - domain
+      - name
+      - slug
+      backend_only: false
+  select_permissions:
+  - role: public
+    permission:
+      columns:
+      - hex_color
+      - id
+      - logo_url
+      - name
+      - slug
+      filter: {}
+      limit: 1
+  - role: user
+    permission:
+      columns:
+      - created_at
+      - hex_color
+      - id
+      - logo_url
+      - name
+      - slug
+      - updated_at
+      filter:
+        id:
+          _eq: x-hasura-company-id
+  update_permissions:
+  - role: user
+    permission:
+      columns:
+      - hex_color
+      - logo_url
+      - name
+      filter:
+        id:
+          _eq: x-hasura-company-id
+      check: null
+- table:
+    schema: public
+    name: jobs
+  object_relationships:
+  - name: company
+    using:
+      foreign_key_constraint_on: company_id
+  array_relationships:
+  - name: applicants
+    using:
+      foreign_key_constraint_on:
+        column: job_id
+        table:
+          schema: public
+          name: applicants
+  insert_permissions:
+  - role: user
+    permission:
+      check: {}
+      set:
+        company_id: x-hasura-company-id
+      columns:
+      - description
+      - form_cv
+      - form_email
+      - form_first_name
+      - form_last_name
+      - form_mobile
+      - form_personal_letter
+      - random_str
+      - slug
+      - title
+      backend_only: false
+  select_permissions:
+  - role: public
+    permission:
+      columns:
+      - company_id
+      - created_at
+      - description
+      - form_cv
+      - form_email
+      - form_first_name
+      - form_last_name
+      - form_mobile
+      - form_personal_letter
+      - id
+      - random_str
+      - slug
+      - title
+      - updated_at
+      filter:
+        active:
+          _eq: true
+      limit: 50
+  - role: user
+    permission:
+      columns:
+      - active
+      - company_id
+      - created_at
+      - description
+      - form_cv
+      - form_email
+      - form_first_name
+      - form_last_name
+      - form_mobile
+      - form_personal_letter
+      - id
+      - random_str
+      - slug
+      - title
+      - updated_at
+      filter:
+        company_id:
+          _eq: x-hasura-company-id
+      allow_aggregations: true
+  update_permissions:
+  - role: user
+    permission:
+      columns:
+      - active
+      - description
+      - form_cv
+      - form_email
+      - form_first_name
+      - form_last_name
+      - form_mobile
+      - form_personal_letter
+      - slug
+      - title
+      filter:
+        company_id:
+          _eq: x-hasura-company-id
+      check: null
+  delete_permissions:
+  - role: user
+    permission:
+      filter:
+        company_id:
+          _eq: x-hasura-company-id
+- table:
+    schema: public
+    name: recepies
+  select_permissions:
+  - role: public
+    permission:
+      columns:
+      - id
+      - title
+      filter: {}
+- table:
+    schema: public
+    name: users
+  object_relationships:
+  - name: account
+    using:
+      manual_configuration:
+        remote_table:
+          schema: auth
+          name: accounts
+        column_mapping:
+          id: user_id
+  - name: company
+    using:
+      foreign_key_constraint_on: company_id
+  array_relationships:
+  - name: applicant_comments
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          schema: public
+          name: applicant_comments
+  select_permissions:
+  - role: me
+    permission:
+      columns:
+      - id
+      - created_at
+      - updated_at
+      - display_name
+      - avatar_url
+      - company_id
+      filter:
+        id:
+          _eq: X-Hasura-User-Id
+  - role: user
+    permission:
+      columns:
+      - id
+      - created_at
+      - updated_at
+      - display_name
+      - avatar_url
+      - company_id
+      filter:
+        _or:
+        - id:
+            _eq: X-Hasura-User-Id
+        - company_id:
+            _eq: x-hasura-company-id
+      allow_aggregations: true
