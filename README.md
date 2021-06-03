@@ -1,3 +1,3 @@
 # gh-nhost-test
 
-2
+3
